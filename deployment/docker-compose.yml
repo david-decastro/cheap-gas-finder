@@ -1,0 +1,35 @@
+services:
+  bot:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: cheap-gas-finder-bot
+    volumes:
+      - ..:/app
+    command: python server.py
+    restart: unless-stopped
+    ports:
+      - "1084:8443"
+    networks:
+      - app-network
+
+  ingestor:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: cheap-gas-finder-ingestor
+    volumes:
+      - ..:/app
+    command: >
+      sh -c "while true; do
+               python ingest/ingestor.py;
+               sleep 3600;
+             done"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+    name: shared-app-network
