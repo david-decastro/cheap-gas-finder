@@ -23,7 +23,7 @@ Este servicio asegura que los precios sean confiables y actualizados regularment
 ## 📊 Procesamiento de datos y privacidad
 
 - **Datos temporales y anónimos**: El bot procesa temporalmente estadísticas de uso anónimas para mejorar el servicio. No se guarda ni se comparte ninguna información personal.
-- **Tu privacidad está protegida**: Solo se utilizan datos relacionados con las preferencias de combustible y ubicación para la búsqueda actual. Una vez que la búsqueda ha terminado, toda la información se borra.
+- **Tu privacidad está protegida**: Solo usamos los datos necesarios para la búsqueda actual, como tus preferencias de combustible y tu ubicación aproximada. Tanto tu identificador de usuario como tu ubicación se almacenan de forma anonimizada y se utilizan únicamente para generar estadísticas de uso.
 
 ## 🌍 Disponibilidad
 
@@ -62,7 +62,7 @@ This service ensures that prices are reliable and regularly updated, as they com
 ## 📊 Data Processing and Privacy
 
 - **Temporary and Anonymous Data**: The bot temporarily processes anonymous usage statistics to improve the service. No personal data is stored or shared.
-- **Your Privacy is Safe**: The only data we handle is related to fuel type preferences and location for the purpose of the current search. Once the search is done, everything is cleared.
+- **Your Privacy is Safe**: We only use the data necessary for the current search, such as your fuel preferences and approximate location. Both your user ID and location are stored anonymously and are used solely to generate usage statistics.
 
 ## 🌍 Availability
 

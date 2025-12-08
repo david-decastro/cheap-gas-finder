@@ -2,6 +2,9 @@ import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 import configparser
+
+from helpers.log_helper import build_log, build_error_log
+from repositories.LogsRepository import LogsRepository
 from repositories.StationsRepository import StationsRepository
 from helpers.messages_builder import build_station_message
 from helpers.keyboard_builder import build_keyboard
@@ -25,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize repositories
 stations_repo = StationsRepository()
+logs_repo = LogsRepository()
 
 # HANDLERS
 async def start(update: Update, context) -> None:
@@ -33,6 +37,8 @@ async def start(update: Update, context) -> None:
         await update.message.reply_text("⛽ Selecciona el tipo de combustible", reply_markup=reply_markup)
     else:
         await update.callback_query.message.reply_text("⛽ Selecciona el tipo de combustible", reply_markup=reply_markup)
+
+    logs_repo.save(build_log("START", update))  # Log
 
 
 async def select_fuel(update: Update, context) -> None:
@@ -56,14 +62,16 @@ async def location_handler(update: Update, context) -> None:
     await update.message.reply_text("Selecciona un radio de búsqueda", reply_markup=reply_markup)
 
 
-async def select_radius(update: Update, context) -> None:
+async def perform_search(update: Update, context) -> None:
     query = update.callback_query
+
+    # Initializing variables to perform the search
+    open_only = False
+    radius_km = context.user_data.get('radius', None)
 
     if query.data == 'open_only':
         open_only = True
-        radius_km = context.user_data.get('radius', 5)
-    else:
-        open_only = False
+    elif query.data != 'repeat_search':
         radius_km = float(query.data.replace("km", "").strip())
         context.user_data['radius'] = radius_km
 
@@ -102,11 +110,15 @@ async def select_radius(update: Update, context) -> None:
     if open_only:
         reply_markup = build_keyboard("restart_options_without_open")
     else:
-        reply_markup = build_keyboard("restart_options")
+        # Shows the "Buscar solo abiertas" button if at least one of the three gas stations is closed
+        open_gas_stations_count = sum(1 for station in nearest_stations if station.get("is_open", True))
+        reply_markup = build_keyboard("restart_options", open_gas_stations_count < 3)
 
     await query.message.reply_text(
         message, parse_mode="HTML", disable_web_page_preview=True, reply_markup=reply_markup
     )
+
+    logs_repo.save(build_log("SEARCH", update, context)) # Log
 
 
 async def restart_handler(update: Update, context) -> None:
@@ -115,8 +127,27 @@ async def restart_handler(update: Update, context) -> None:
 
 
 async def generic_response(update: Update, context) -> None:
+    logs_repo.save(build_log("GENERIC", update)) # Log
+
     reply_markup = build_keyboard("remove")
     await update.message.reply_text("Lo siento, no entiendo ese comando", reply_markup=reply_markup)
+
+
+async def error_handler(update: object, context) -> None:
+    """Log any errors caused by updates"""
+    logger.error("Exception while handling update:", exc_info=context.error)
+
+    reply_markup = build_keyboard("remove")
+    await update.message.reply_text(
+        "😢 Lo siento mucho!\n\n"
+        "El bot ha encontrado un error y algo ha fallado.\n"
+        "Por favor, inténtalo de nuevo.",
+        reply_markup=reply_markup
+    )
+
+    if isinstance(update, Update):
+        logger.info("Update that failed: %s", update.to_dict())
+        logs_repo.save(build_error_log(update))
 
 # MAIN
 def main() -> None:
@@ -125,10 +156,12 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(select_fuel, pattern='^(diesel|gasoline_95|gasoline_98)$'))
     application.add_handler(MessageHandler(filters.LOCATION, location_handler))
-    application.add_handler(CallbackQueryHandler(select_radius, pattern='^.*km$'))
-    application.add_handler(CallbackQueryHandler(select_radius, pattern='^open_only$'))
+    application.add_handler(CallbackQueryHandler(perform_search, pattern='^.*km$'))
+    application.add_handler(CallbackQueryHandler(perform_search, pattern='^open_only$'))
+    application.add_handler(CallbackQueryHandler(perform_search, pattern='^repeat_search$'))
     application.add_handler(CallbackQueryHandler(restart_handler, pattern='^restart$'))
     application.add_handler(MessageHandler(filters.ALL, generic_response))
+    application.add_error_handler(error_handler)
 
     application.run_webhook(
         listen="0.0.0.0",

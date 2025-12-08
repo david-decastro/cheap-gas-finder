@@ -1,18 +1,11 @@
-import configparser
-from pymongo import MongoClient, GEOSPHERE
+from pymongo import GEOSPHERE
 from datetime import datetime
+from repositories.MongoConnection import MongoConnection
 
 class StationsRepository:
-    def __init__(self, config_file="_config.ini"):
-        config = configparser.ConfigParser()
-        config.read(config_file)
-
-        self.uri = config.get("MongoDB", "uri", fallback="mongodb://localhost:27017")
-        self.db_name = config.get("MongoDB", "db_name", fallback="cheap-gas-finder")
-
-        self.client = MongoClient(self.uri)
-        self.db = self.client[self.db_name]
-        self.collection = self.db["stations"]
+    def __init__(self):
+        mongo = MongoConnection()
+        self.collection = mongo.db["stations"]
 
         # Ensure geospatial index exists to improve performance
         self.collection.create_index([("location", GEOSPHERE)])
@@ -32,7 +25,7 @@ class StationsRepository:
                     "distanceField": "distance",
                     "maxDistance": radius_km * 1000,
                     "spherical": True,
-                    "query": {fuel_type: {"$ne": None}}  # solo estaciones con precio
+                    "query": {fuel_type: {"$ne": None}}  # only stations with price
                 }
             },
             {"$sort": {fuel_type: 1}}
@@ -57,6 +50,7 @@ class StationsRepository:
         Check if a station is open at the given datetime.
         schedule_dict: output of parse_schedule
         """
+
         if not schedule_dict:
             return False
 

@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 
-def build_keyboard(phase: str):
+def build_keyboard(phase: str, show_only_open_btn: bool = False):
     """
     Return the appropriate keyboard for each phase of the bot.
     """
@@ -23,14 +23,18 @@ def build_keyboard(phase: str):
         ])
     elif phase == "restart_options":
         # Inline keyboard after search results
-        return InlineKeyboardMarkup([
-            [InlineKeyboardButton("Buscar otra vez", callback_data='restart')],
-            [InlineKeyboardButton("Buscar solo abiertas", callback_data='open_only')],
-        ])
+        buttons = [
+            [InlineKeyboardButton("Nueva búsqueda", callback_data='restart')],
+            [InlineKeyboardButton("Repetir búsqueda", callback_data='repeat_search')]
+        ]
+        if show_only_open_btn:
+            buttons.insert(1, [InlineKeyboardButton("Buscar solo abiertas", callback_data='open_only')])
+        return InlineKeyboardMarkup(buttons)
     elif phase == "restart_options_without_open":
         # Inline keyboard after search results
         return InlineKeyboardMarkup([
-            [InlineKeyboardButton("Buscar otra vez", callback_data='restart')],
+            [InlineKeyboardButton("Nueva búsqueda", callback_data='restart')],
+            [InlineKeyboardButton("Repetir búsqueda", callback_data='repeat_search')],
         ])
     elif phase == "request_location":
         # Reply keyboard to request user location
